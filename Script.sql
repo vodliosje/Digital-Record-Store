@@ -116,3 +116,60 @@ WHERE
 ORDER BY
 	rc.Country ASC;
 
+
+--Calculate the total sales for each Sales Support Agent and compare it to the Average Total Sale across all Sales Support Agents.
+
+SELECT
+	e.FirstName || " " || e.LastName AS EmployeeName,
+	SUM(i.Total) AS TotalSales,
+	AVG(SUM(i.Total)) OVER () AS OveralAverage,
+	(SUM(i.Total)-(AVG(SUM(i.Total)) OVER ())) AS Varience
+FROM Employee e 
+JOIN Customer c ON e.EmployeeId = c.SupportRepId 
+JOIN Invoice i ON i.CustomerId = c.CustomerId 
+WHERE e.Title  = "Sales Support Agent"
+GROUP BY  e.EmployeeId
+ORDER BY TotalSales DESC;
+
+--Determine the top-selling Media Type (e.g., MPEG Audio File, AAC Audio File) for each continent/region
+-- (using the Country list to define regions like North America, South America, Europe, etc.).
+-- Country, Media Type Name, and Total Quantity Sold for the top-ranked media type in each country.
+WITH MediaSales AS (
+	SELECT
+		c.Country,
+		mt.MediaTypeId,
+		SUM(il.Quantity ) AS TotalQuantitySold
+	FROM Customer c
+	JOIN Invoice i ON i.CustomerId = c.CustomerId 
+	JOIN InvoiceLine il ON il.InvoiceId = i.InvoiceId 
+	JOIN Track t On il.TrackId = t.TrackId
+	JOIN MediaType mt ON t.MediaTypeId = mt.MediaTypeId
+	GROUP BY  mt. MediaTypeId, c.Country
+), RankedSale AS (
+	SELECT
+		Country,
+		MediaTypeId,
+		TotalQuantitySold,
+		DENSE_RANK() OVER (PARTITION BY Country ORDER BY TotalQuantitySold DESC ) AS Rank
+	FROM MediaSales 
+)
+SELECT
+	rs.Country,
+	mt.Name ,
+	rs.TotalQuantitySold
+FROM
+	RankedSale rs
+JOIN MediaType mt ON mt.MediaTypeId = rs.MediaTypeId 
+WHERE
+	rs.Rank = 1
+ORDER BY 
+	rs.TotalQuantitySold DESC;
+	
+	
+
+
+
+
+
+
+
